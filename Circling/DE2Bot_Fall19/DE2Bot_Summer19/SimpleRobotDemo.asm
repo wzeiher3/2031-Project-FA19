@@ -98,6 +98,7 @@ ValidateDistance:
 	STORE SENRadius
 	
 	; Doubling it and saving it to a new variable
+	LOAD SENRadius
 	ADD SENRadius
 	STORE SENRadiusTwice
 		
@@ -123,21 +124,69 @@ LoopHalfWay:
 	STORE DTheta
 	
 	; Modifying initial xpos to be the last xpos in the half way
-	IN XPOS
-	STORE XPOSInitial
+	IN YPOS
+	STORE YPOSInitial
 	OUT SSEG1 ; DEBUG
 	
-LoopFullWay:
-	IN XPOS
-	SUB XPOSInitial
-	SUB SENRadiusTwice
+	; Start moving forward
+	LOAD FMid
+	STORE Dvel
 	
-	JNEG LoopFullWay
+; This point is immediately after the first turn
+	 CALL FULLSUBYNEG
+	
 
 	; Rotate clock wise 90 degrees
 	IN Theta
 	ADDI -90
 	STORE DTheta
+	
+	IN XPOS
+	STORE XPOSInitial
+	
+	; Start moving forward
+	LOAD FMid
+	STORE Dvel
+	
+	CALL FULLSUBXPOS
+	
+	; Rotate clock wise 90 degrees
+	IN Theta
+	ADDI -90
+	STORE DTheta
+	
+	; Modifying initial xpos to be the last xpos in the half way
+	IN YPOS
+	STORE YPOSInitial
+	;OUT SSEG1 ; DEBUG
+	
+	; Start moving forward
+	LOAD FMid
+	STORE Dvel
+	
+	CALL FULLSUBYPOS
+	
+	; Rotate clock wise 90 degrees
+	IN Theta
+	ADDI -90
+	STORE DTheta
+	
+	; Modifying initial xpos to be the last xpos in the half way
+	IN XPOS
+	STORE XPOSInitial
+	OUT SSEG1 ; DEBUG
+	
+	; Start moving forward
+	LOAD FMid
+	STORE Dvel
+	
+LoopFinal:
+	IN  XPOS ; Current
+	SUB XPOSInitial ; initial
+	SUB SENRadius ; radius (distance to travel)
+	
+	; if curr - intitial - radius = 0 we need to rotate 90 degrees
+	JNEG LoopFinal
 	
 	; Stop bot
 	LOADI 0
@@ -672,7 +721,41 @@ DeadBatt:
 	OUT    XLEDS
 	CALL   Wait1       ; 1 second
 	JUMP   DeadBatt    ; repeat forever
+
+; Subroutine to loop through the forward direction loop
+FULLSUBYPOS:
+LoopWay:
+	IN YPOS
+	OUT SSEG2
+	SUB YPOSInitial
+	SUB SENRadiusTwice
 	
+	JNEG LoopWay
+	RETURN	
+		
+; Subroutine to loop through the forward direction loop
+FULLSUBYNEG:
+LoopFullWay:
+	IN YPOS
+	OUT SSEG2
+	SUB YPOSInitial
+	ADD SENRadiusTwice
+	
+	JPOS LoopFullWay
+	RETURN
+	
+;subroutine for X direction
+FULLSUBXPOS:
+LoopFullWayX:
+	IN  XPOS ; Current
+	OUT SSEG1
+	SUB XPOSInitial ; initial
+	ADD SENRadiusTwice ; radius (distance to travel)
+	
+	; if curr - intitial - radius = 0 we need to rotate 90 degrees
+	JPOS LoopFullWayX
+	RETURN
+
 ; Subroutine to read the A/D (battery voltage)
 ; Assumes that SetupI2C has been run
 GetBattLvl:
@@ -720,6 +803,7 @@ I2CError:
 Temp:     DW 0 ; "Temp" is not a great name, but can be useful
 
 ; Added by Farzam
+YPOSInitial:     DW  0
 XPOSInitial: 	 DW  0
 SENRadius:	 	 DW  0
 SENRadiusTwice:	 DW  0
